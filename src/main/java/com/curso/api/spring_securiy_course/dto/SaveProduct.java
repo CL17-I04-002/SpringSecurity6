@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 public class SaveProduct implements Serializable {
     @NotBlank
     private String name;
-    @DecimalMin(value = "0.01")
+    @DecimalMin(value = "0.01", message = "el precio debe de ser mayor a cero")
     private BigDecimal price;
     @Min(value = 1)
     private Long categoryId;
