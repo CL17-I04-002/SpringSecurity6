@@ -1,9 +1,10 @@
 package com.curso.api.spring_securiy_course.service.auth;
 
-import com.curso.api.spring_securiy_course.persistence.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,9 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 public class JwtService {
@@ -32,6 +31,7 @@ public class JwtService {
     public String generateToken(UserDetails user, Map<String, Object> extraClaims) {
         Date issuedAt = new Date(System.currentTimeMillis());
         Date expiration = new Date(((EXPIRATION_IN_MINUTE) * 60 * 1000) + issuedAt.getTime());
+        // compact consists to generate JWT appropriately
         String jwt = Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(user.getUsername())
@@ -49,7 +49,27 @@ public class JwtService {
      * @return Key
      */
     private Key generateKey() {
-        byte[] key = SECRET_KEY.getBytes();
-        return Keys.hmacShaKeyFor(key);
+        // We need to decode key because it's base 64 in the application.properties
+        byte[] passwordDecoded = Decoders.BASE64.decode(SECRET_KEY);
+        return Keys.hmacShaKeyFor(passwordDecoded);
+    }
+
+    /**
+     * We extract the token and returning the subj
+     * @param jwt
+     * @return
+     */
+    public String extractUsername(String jwt) {
+        return extractAllClaims(jwt).getSubject();
+    }
+
+    /**
+     * We get server's signature and analyzing the token and finally returning body
+     * @param jwt
+     * @return
+     */
+    private Claims extractAllClaims(String jwt) {
+        return  Jwts.parserBuilder().setSigningKey(generateKey()).build()
+                .parseClaimsJws(jwt).getBody();
     }
 }

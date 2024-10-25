@@ -8,11 +8,15 @@ import com.curso.api.spring_securiy_course.persistence.util.Role;
 import com.curso.api.spring_securiy_course.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import java.util.Optional;
 
 /**
  * Implement UserService
  */
+@Service
 public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
@@ -32,6 +36,17 @@ public class UserServiceImpl implements UserService {
         user.setRole(Role.ROLE_CUSTOMER);
         return userRepository.save(user);
     }
+
+    @Override
+    public Optional<User> findOneByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+
+    /**
+     * If doesn't match the passwords
+     * @param dto
+     */
     private void validatePassword(SaveUser dto){
         if(!StringUtils.hasText(dto.getPassword()) || !StringUtils.hasText(dto.getRepeatedPassword())){
             throw new InvalidPasswordException("Password don't match");
