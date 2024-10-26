@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
@@ -33,14 +34,16 @@ public class JwtService {
         Date expiration = new Date(((EXPIRATION_IN_MINUTE) * 60 * 1000) + issuedAt.getTime());
         // compact consists to generate JWT appropriately
         String jwt = Jwts.builder()
-                .setClaims(extraClaims)
-                .setSubject(user.getUsername())
-                .setIssuedAt(issuedAt)
-                .setExpiration(expiration)
-                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
-                .signWith(generateKey(), SignatureAlgorithm.HS256)
-                .compact();
+                .header()
+                    .type("JWT")
+                    .and()
+                .subject(user.getUsername())
+                .issuedAt(issuedAt)
+                .expiration(expiration)
+                .claims(extraClaims)
 
+                .signWith(generateKey(), Jwts.SIG.HS256)
+                .compact();
         return jwt;
     }
 
@@ -48,7 +51,7 @@ public class JwtService {
      * We sign our server key
      * @return Key
      */
-    private Key generateKey() {
+    private SecretKey generateKey() {
         // We need to decode key because it's base 64 in the application.properties
         byte[] passwordDecoded = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(passwordDecoded);
@@ -69,7 +72,7 @@ public class JwtService {
      * @return
      */
     private Claims extractAllClaims(String jwt) {
-        return  Jwts.parserBuilder().setSigningKey(generateKey()).build()
-                .parseClaimsJws(jwt).getBody();
+        return  Jwts.parser().verifyWith(generateKey()).build()
+                .parseSignedClaims(jwt).getPayload();
     }
 }
