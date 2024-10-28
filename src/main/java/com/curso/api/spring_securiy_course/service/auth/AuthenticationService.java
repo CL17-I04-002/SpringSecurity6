@@ -4,6 +4,7 @@ import com.curso.api.spring_securiy_course.dto.RegisteredUser;
 import com.curso.api.spring_securiy_course.dto.SaveUser;
 import com.curso.api.spring_securiy_course.dto.auth.AuthenticationRequest;
 import com.curso.api.spring_securiy_course.dto.auth.AuthenticationResponse;
+import com.curso.api.spring_securiy_course.exception.ObjectNotFoundException;
 import com.curso.api.spring_securiy_course.persistence.entity.User;
 import com.curso.api.spring_securiy_course.service.UserService;
 import jakarta.validation.Valid;
@@ -90,5 +91,21 @@ public class AuthenticationService {
             return false;
         }
 
+    }
+
+    /**
+     * We get session's user in short
+     * @return
+     */
+    public User findLoggedInUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        /// It's a way to instance
+        if(auth instanceof UsernamePasswordAuthenticationToken authToken){
+            String username = (String) authToken.getPrincipal();
+
+            return userService.findOneByUsername(username)
+                    .orElseThrow(() -> new ObjectNotFoundException("User not found. Username: " + username));
+        }
+        return null;
     }
 }
