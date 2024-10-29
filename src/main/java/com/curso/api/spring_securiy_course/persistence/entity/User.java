@@ -28,10 +28,12 @@ public class User implements UserDetails {
         if(role == null) return null;
         if(role.getPermissions() == null) return null;
 
-        return role.getPermissions().stream()
+        List<SimpleGrantedAuthority> authorities = role.getPermissions().stream()
                 .map(each -> each.name())
                 .map(each -> new SimpleGrantedAuthority(each))
                 .collect(Collectors.toList());
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.name()));
+        return authorities;
     }
 
     @Override
