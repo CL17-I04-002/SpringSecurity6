@@ -1,12 +1,12 @@
 package com.curso.api.spring_securiy_course.config.security;
 
 import com.curso.api.spring_securiy_course.config.security.filter.JwtAuthenticationFilter;
-import com.curso.api.spring_securiy_course.persistence.util.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
@@ -16,6 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+// It enables http security by method, usually comes in the controllers
+@EnableMethodSecurity(prePostEnabled = true)
 public class HttpSecurityConfig {
     @Autowired
     private AuthenticationProvider daoAuthProvider;
@@ -37,10 +39,10 @@ public class HttpSecurityConfig {
                 // We're gonna run jwtAuthenticationFilter before UsernamePasswordAuthenticationFilter
                 // Filters have a sort, in this case UsernamePasswordAuthenticationFilter is 1900, but you can find them in the documentation at addFilterBefore
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests( authReqConfig -> {
+                /*.authorizeHttpRequests( authReqConfig -> {
 
                     buildRequestMatchers(authReqConfig);
-                })
+                })*/
                 .build();
     }
 
@@ -49,7 +51,7 @@ public class HttpSecurityConfig {
     Products Endpoint Authorization
      */
 
-        authReqConfig.requestMatchers(HttpMethod.GET, "/products")
+       /* authReqConfig.requestMatchers(HttpMethod.GET, "/products")
                 .hasAnyRole(Role.ADMINISTRATOR.name(), Role.ASSISTANT_ADMINISTRATOR.name());
 
 
@@ -65,9 +67,9 @@ public class HttpSecurityConfig {
         authReqConfig.requestMatchers(HttpMethod.PUT, "/products/{productId}/disabled")
                 .hasRole(Role.ADMINISTRATOR.name());
 
-                    /*
+                    *//*
                     Categories Endpoint Authorization
-                     */
+                     *//*
 
         authReqConfig.requestMatchers(HttpMethod.GET, "/categories")
                 .hasAnyRole(Role.ADMINISTRATOR.name(), Role.ASSISTANT_ADMINISTRATOR.name());
@@ -86,7 +88,7 @@ public class HttpSecurityConfig {
 
         authReqConfig.requestMatchers(HttpMethod.PUT, "/auth/profile")
                 .hasAnyRole(Role.ADMINISTRATOR.name(), Role.ASSISTANT_ADMINISTRATOR.name(), Role.CUSTOMER.name());
-
+*/
                     /*
                     Authorization public endpoints
                      */
