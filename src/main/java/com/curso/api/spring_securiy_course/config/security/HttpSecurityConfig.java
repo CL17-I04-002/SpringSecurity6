@@ -6,12 +6,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -23,6 +25,8 @@ public class HttpSecurityConfig {
     private AuthenticationProvider daoAuthProvider;
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired
+    private AuthorizationManager<RequestAuthorizationContext> authorizationManager;
 
     /**
      * Helps us to configure filters and securing the endpoints
@@ -39,6 +43,10 @@ public class HttpSecurityConfig {
                 // We're gonna run jwtAuthenticationFilter before UsernamePasswordAuthenticationFilter
                 // Filters have a sort, in this case UsernamePasswordAuthenticationFilter is 1900, but you can find them in the documentation at addFilterBefore
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests( authReqConfig -> {
+                    // Let's use our own implementation to authorize, in this case with authorizationManager
+                    authReqConfig.anyRequest().access(authorizationManager);
+                })
                 /*.authorizeHttpRequests( authReqConfig -> {
 
                     buildRequestMatchers(authReqConfig);
