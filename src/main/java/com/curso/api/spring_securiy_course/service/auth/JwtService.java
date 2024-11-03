@@ -6,9 +6,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
@@ -74,5 +76,20 @@ public class JwtService {
     private Claims extractAllClaims(String jwt) {
         return  Jwts.parser().verifyWith(generateKey()).build()
                 .parseSignedClaims(jwt).getPayload();
+    }
+
+    public String extractJwtFromRequest(HttpServletRequest request) {
+          // 1. Get Authorization header
+        String authorizationHeader = request.getHeader("Authorization");
+        if(!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith("Bearer ")){
+            return null;
+        }
+        // 2. Get Jwt token since header
+        return authorizationHeader.split(" ")[1];
+
+    }
+
+    public Date extractExpiration(String jwt) {
+        return extractAllClaims(jwt).getExpiration();
     }
 }

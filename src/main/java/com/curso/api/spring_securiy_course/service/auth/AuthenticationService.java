@@ -5,8 +5,11 @@ import com.curso.api.spring_securiy_course.dto.SaveUser;
 import com.curso.api.spring_securiy_course.dto.auth.AuthenticationRequest;
 import com.curso.api.spring_securiy_course.dto.auth.AuthenticationResponse;
 import com.curso.api.spring_securiy_course.exception.ObjectNotFoundException;
+import com.curso.api.spring_securiy_course.persistence.entity.JwtToken;
 import com.curso.api.spring_securiy_course.persistence.entity.User;
+import com.curso.api.spring_securiy_course.persistence.repository.JwtTokenRepository;
 import com.curso.api.spring_securiy_course.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,9 +18,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service that registers one customer
@@ -31,6 +36,9 @@ public class AuthenticationService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private JwtTokenRepository jwtRepository;
+
     /**
      * Using both services, you will validate and registering a client, after that it will generate a JWT compact
      * @param newUser
@@ -38,6 +46,9 @@ public class AuthenticationService {
      */
     public RegisteredUser registerOneCustomer(@Valid SaveUser newUser) {
         User user = userService.registerOneCustomer(newUser);
+        String jwt = jwtService.generateToken(user, generateExtraClaims(user));
+
+        saveUserToken(user, jwt);
 
         RegisteredUser userDto = new RegisteredUser();
         userDto.setId(user.getId());
@@ -45,7 +56,7 @@ public class AuthenticationService {
         userDto.setUsername(user.getUsername());
         userDto.setRole(user.getRole().getName());
 
-        String jwt = jwtService.generateToken(user, generateExtraClaims(user));
+
         userDto.setJwt(jwt);
 
         return userDto;
@@ -75,11 +86,27 @@ public class AuthenticationService {
         UserDetails user = userService.findOneByUsername(authRequest.getUsername()).get();
 
         String jwt = jwtService.generateToken(user, generateExtraClaims((User) user));
+        saveUserToken((User) user, jwt);
 
         AuthenticationResponse authRsp = new AuthenticationResponse();
         authRsp.setJwt(jwt);
 
         return authRsp;
+    }
+
+    /**
+     * Sets token and storing in db
+     * @param user
+     * @param jwt
+     */
+    private void saveUserToken(User user, String jwt) {
+        JwtToken token = new JwtToken();
+        token.setToken(jwt);
+        token.setUser(user);
+        token.setExpiration(jwtService.extractExpiration(jwt));
+        token.setValid(true);
+
+        jwtRepository.save(token);
     }
 
     public boolean validateToken(String jwt) {
@@ -107,5 +134,20 @@ public class AuthenticationService {
                     .orElseThrow(() -> new ObjectNotFoundException("User not found. Username: " + username));
         }
         return null;
+    }
+
+    /**
+     * We realize logout process and store it in dbb
+     * @param request
+     */
+    public void logout(HttpServletRequest request) {
+        String jwt = jwtService.extractJwtFromRequest(request);
+        if(jwt == null || !StringUtils.hasText(jwt)) return;
+
+        Optional<JwtToken> token = jwtRepository.findByToken(jwt);
+        if(token.isPresent() && token.get().isValid()){
+            token.get().setValid(false);
+            jwtRepository.save(token.get());
+        }
     }
 }
