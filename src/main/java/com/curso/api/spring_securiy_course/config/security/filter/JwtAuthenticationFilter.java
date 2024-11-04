@@ -96,8 +96,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if(!isValid){
             System.out.println("Invalid token");
+            updateTokenStatus(token);
         }
-        updateTokenStatus(token);
         return isValid;
     }
 
