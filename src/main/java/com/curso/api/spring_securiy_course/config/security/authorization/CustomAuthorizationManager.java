@@ -12,9 +12,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -60,8 +63,23 @@ public class CustomAuthorizationManager implements AuthorizationManager<RequestA
 
     }
 
-    private boolean isGranted(String url, String httpMethod, Authentication authentication) {
+    /*private boolean isGranted(String url, String httpMethod, Authentication authentication) {
         if(authentication == null || !(authentication instanceof UsernamePasswordAuthenticationToken)){
+            throw new AuthenticationCredentialsNotFoundException("User not logged in");
+        }
+
+        /// We get actual operation that user may have
+        List<Operation> operations = obtainOperations(authentication);
+
+        boolean isGranted = operations.stream().anyMatch(getOperationPredicate(url, httpMethod));
+
+        System.out.println("IS GRANTED: " + isGranted);
+
+        return isGranted;
+
+    }*/
+    private boolean isGranted(String url, String httpMethod, Authentication authentication) {
+        if(authentication == null || !(authentication instanceof JwtAuthenticationToken)){
             throw new AuthenticationCredentialsNotFoundException("User not logged in");
         }
 
@@ -98,6 +116,43 @@ public class CustomAuthorizationManager implements AuthorizationManager<RequestA
      * @return
      */
     private List<Operation> obtainOperations(Authentication authentication) {
+        JwtAuthenticationToken authToken = (JwtAuthenticationToken) authentication;
+        Jwt jwt = authToken.getToken();
+        String username = jwt.getSubject();
+        User user = userService.findOneByUsername(username).
+                orElseThrow( () -> new ObjectNotFoundException("User not found. Username " + username));
+        List<Operation> operations = user.getRole().getPermissions().stream()
+                .map(grantedPermission -> grantedPermission.getOperation())
+                .collect(Collectors.toList());
+
+        List<String> scopes = extractScopes(jwt);
+
+        if (!scopes.contains("ALL")){
+            operations = operations.stream()
+                    .filter(operation -> scopes.contains(operation.getName()))
+                    .collect(Collectors.toList());
+        }
+
+        return operations;
+    }
+
+    /**
+     * Extract scopes from jwt OAuth2
+     * @param jwt
+     * @return List<String>
+     */
+    private List<String> extractScopes(Jwt jwt) {
+        List<String> scopes = new ArrayList<>();
+        try{
+            // Authorization manager rename with this name
+            scopes = (List<String>) jwt.getClaims().get("scope");
+        }catch (Exception e){
+            System.out.println("there was a problem to extract client's scopes");
+        }
+        return scopes;
+    }
+
+    /*private List<Operation> obtainOperations(Authentication authentication) {
         UsernamePasswordAuthenticationToken authToken = (UsernamePasswordAuthenticationToken) authentication;
         String username = (String) authToken.getPrincipal();
         User user = userService.findOneByUsername(username).
@@ -105,7 +160,7 @@ public class CustomAuthorizationManager implements AuthorizationManager<RequestA
         return user.getRole().getPermissions().stream()
                 .map(grantedPermission -> grantedPermission.getOperation())
                 .collect(Collectors.toList());
-    }
+    }*/
 
     /**
      * We get actual endpoint and if it i'snt public, return false
